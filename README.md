@@ -18,7 +18,7 @@ https://www.kaggle.com/connorwynkoop/steam-monthly-player-data
 
 • Computed Mean Absolute Percentage Error (MAPE). Achieved 96% accuracy with the regression model.
 
-• For top 100 games, split the data into training and test set and performed KNN clustering based on total player count.
+• For the top 100 games, split the data into training and test set and performed KNN clustering based on total player count.
 
 ==========
 <!DOCTYPE html>
