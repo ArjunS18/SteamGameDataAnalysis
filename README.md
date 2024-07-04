@@ -122,3 +122,146 @@ https://www.kaggle.com/connorwynkoop/steam-monthly-player-data
     </script>
 </body>
 </html>
+
+---------------------
+
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Convert Excel to HTML Table using JavaScript</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.1/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mt-4 mb-4">Convert Excel to HTML Table using JavaScript</h2>
+        <div class="card">
+            <div class="card-header"><b>Select Excel File</b></div>
+            <div class="card-body">
+                <input type="file" id="excel_file" />
+                <button id="back_button" class="btn btn-secondary mt-3">Back</button>
+                <button id="submit_button" class="btn btn-primary mt-3" disabled>Submit</button>
+            </div>
+        </div>
+        <div id="excel_data" class="mt-5"></div>
+    </div>
+</body>
+</html>
+
+<script>
+const excel_file = document.getElementById('excel_file');
+const submit_button = document.getElementById('submit_button');
+const back_button = document.getElementById('back_button');
+
+excel_file.addEventListener('change', (event) => {
+    if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(event.target.files[0].type)) {
+        document.getElementById('excel_data').innerHTML = '<div class="alert alert-danger">Only .xlsx or .xls file format are allowed</div>';
+        excel_file.value = '';
+        return false;
+    }
+
+    var reader = new FileReader();
+    reader.readAsArrayBuffer(event.target.files[0]);
+
+    reader.onload = function (event) {
+        var data = new Uint8Array(reader.result);
+        var work_book = XLSX.read(data, { type: 'array' });
+        var sheet_name = work_book.SheetNames;
+        var sheet_data = XLSX.utils.sheet_to_json(work_book.Sheets[sheet_name[0]], { header: 1 });
+
+        if (sheet_data.length > 0) {
+            var table_output = '<table class="table table-striped table-bordered">';
+            var columnsToCheck = ['Column1', 'Column2']; // Replace with the actual column titles to check for null values
+            var duplicateCheckColumn = 'Column1'; // Replace with the actual column title to check for duplicates
+
+            // Get the indexes of the specific columns to check for null values
+            var columnIndexesToCheck = [];
+            for (var headerCell = 0; headerCell < sheet_data[0].length; headerCell++) {
+                if (columnsToCheck.includes(sheet_data[0][headerCell])) {
+                    columnIndexesToCheck.push(headerCell);
+                }
+            }
+
+            // Get the index of the column to check for duplicates
+            var duplicateCheckIndex = sheet_data[0].indexOf(duplicateCheckColumn);
+            var seenValues = new Set();
+            var hasErrors = false;
+
+            for (var row = 0; row < sheet_data.length; row++) {
+                table_output += '<tr>';
+                for (var cell = 0; cell < sheet_data[row].length; cell++) {
+                    if (row == 0) {
+                        table_output += '<th>' + sheet_data[row][cell] + '</th>';
+                    } else {
+                        let cellContent = sheet_data[row][cell];
+                        let style = '';
+
+                        if (columnIndexesToCheck.includes(cell) && (cellContent === null || cellContent === '')) {
+                            style = 'background-color: red;';
+                            hasErrors = true;
+                        }
+
+                        if (cell === duplicateCheckIndex) {
+                            if (seenValues.has(cellContent)) {
+                                style = 'background-color: red;';
+                                hasErrors = true;
+                            } else {
+                                seenValues.add(cellContent);
+                            }
+                        }
+
+                        table_output += `<td style="${style}">${cellContent}</td>`;
+                    }
+                }
+                table_output += '</tr>';
+            }
+
+            table_output += '</table>';
+            document.getElementById('excel_data').innerHTML = table_output;
+            submit_button.disabled = hasErrors;
+        }
+        excel_file.value = '';
+    }
+});
+
+submit_button.addEventListener('click', () => {
+    const table = document.querySelector('#excel_data table');
+    if (table) {
+        const rows = table.querySelectorAll('tr');
+        let data = [];
+        rows.forEach(row => {
+            let rowData = [];
+            const cells = row.querySelectorAll('th, td');
+            cells.forEach(cell => {
+                rowData.push(cell.textContent);
+            });
+            data.push(rowData);
+        });
+
+        fetch('/home/test_index/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (response.ok) {
+                alert('Data successfully submitted!');
+            } else {
+                alert('Failed to submit data.');
+            }
+        }).catch(error => {
+            alert('An error occurred: ' + error.message);
+        });
+    }
+});
+
+back_button.addEventListener('click', () => {
+    // Implement the back button functionality here
+    // For now, just refreshing the page to reset the state
+    location.reload();
+});
+</script>
+
